@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 	computeBeta "google.golang.org/api/compute/v0.beta"
 	"google.golang.org/api/compute/v1"
 )
@@ -77,6 +78,19 @@ func resourceComputeRegionBackendService() *schema.Resource {
 				Computed: true,
 			},
 
+			"load_balancing_scheme": &schema.Schema{
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"INTERNAL", "EXTERNAL"}, false),
+				Default:      "INTERNAL",
+			},
+
+			"port_name": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+
 			"session_affinity": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
@@ -120,9 +134,8 @@ func resourceComputeRegionBackendServiceCreate(d *schema.ResourceData, meta inte
 	}
 
 	service := computeBeta.BackendService{
-		Name:                d.Get("name").(string),
-		HealthChecks:        healthChecks,
-		LoadBalancingScheme: "INTERNAL",
+		Name:         d.Get("name").(string),
+		HealthChecks: healthChecks,
 	}
 
 	var err error
@@ -135,6 +148,14 @@ func resourceComputeRegionBackendServiceCreate(d *schema.ResourceData, meta inte
 
 	if v, ok := d.GetOk("description"); ok {
 		service.Description = v.(string)
+	}
+
+	if v, ok := d.GetOk("load_balancing_scheme"); ok {
+		service.LoadBalancingScheme = v.(string)
+	}
+
+	if v, ok := d.GetOk("port_name"); ok {
+		service.PortName = v.(string)
 	}
 
 	if v, ok := d.GetOk("protocol"); ok {
@@ -207,6 +228,8 @@ func resourceComputeRegionBackendServiceRead(d *schema.ResourceData, meta interf
 	}
 
 	d.Set("description", service.Description)
+	d.Set("load_balancing_scheme", service.LoadBalancingScheme)
+	d.Set("port_name", service.PortName)
 	d.Set("protocol", service.Protocol)
 	d.Set("session_affinity", service.SessionAffinity)
 	d.Set("timeout_sec", service.TimeoutSec)
@@ -244,10 +267,9 @@ func resourceComputeRegionBackendServiceUpdate(d *schema.ResourceData, meta inte
 	}
 
 	service := computeBeta.BackendService{
-		Name:                d.Get("name").(string),
-		Fingerprint:         d.Get("fingerprint").(string),
-		HealthChecks:        healthChecks,
-		LoadBalancingScheme: "INTERNAL",
+		Name:         d.Get("name").(string),
+		Fingerprint:  d.Get("fingerprint").(string),
+		HealthChecks: healthChecks,
 	}
 
 	// Optional things
@@ -259,6 +281,12 @@ func resourceComputeRegionBackendServiceUpdate(d *schema.ResourceData, meta inte
 	}
 	if v, ok := d.GetOk("description"); ok {
 		service.Description = v.(string)
+	}
+	if v, ok := d.GetOk("load_balancing_scheme"); ok {
+		service.LoadBalancingScheme = v.(string)
+	}
+	if v, ok := d.GetOk("port_name"); ok {
+		service.PortName = v.(string)
 	}
 	if v, ok := d.GetOk("protocol"); ok {
 		service.Protocol = v.(string)
